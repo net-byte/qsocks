@@ -76,7 +76,7 @@ func (proxy *ProxyUDP) toRemote() {
 }
 
 func (proxy *ProxyUDP) toLocal(stream quic.Stream, cliAddr *net.UDPAddr) {
-	stream.Close()
+	defer stream.Close()
 	key := cliAddr.String()
 	buf := make([]byte, constant.BufferSize)
 	for {
