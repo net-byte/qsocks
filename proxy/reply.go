@@ -87,7 +87,7 @@ func (proxy *ProxyUDP) toLocal(stream quic.Stream, cliAddr *net.UDPAddr) {
 		if header, ok := proxy.headerMap.Load(key); ok {
 			var data bytes.Buffer
 			data.Write(header.([]byte))
-			data.Write(buf)
+			data.Write(buf[:n])
 			proxy.udpConn.WriteToUDP(data.Bytes(), cliAddr)
 		}
 	}

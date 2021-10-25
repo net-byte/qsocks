@@ -46,7 +46,7 @@ func handshake(config config.Config, stream quic.Stream) (bool, proxy.RequestAdd
 	if n == 0 || err != nil {
 		return false, req
 	}
-	if req.UnmarshalBinary(buf[0:n]) != nil {
+	if req.UnmarshalBinary(buf[:n]) != nil {
 		log.Printf("[server] failed to unmarshal binary %v", err)
 		return false, req
 	}
