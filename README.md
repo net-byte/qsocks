@@ -31,7 +31,7 @@ Usage of /main:
 
 ## Run client
 ```
-docker run -d --restart=always --name qsocks-client -p 1083:1083 1083:1083/udp netbyte/qsocks -l :1083 -s SERVER_IP:8443 -ck=/app/certs/client.key -cp=/app/certs/client.pem -sk=/app/certs/server.key -sp=/app/certs/server.pem
+docker run -d --restart=always --name qsocks-client -p 1083:1083 -p 1083:1083/udp netbyte/qsocks -l :1083 -s SERVER_IP:8443 -ck=/app/certs/client.key -cp=/app/certs/client.pem -sk=/app/certs/server.key -sp=/app/certs/server.pem
 
 ```
 
