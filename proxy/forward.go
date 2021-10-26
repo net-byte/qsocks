@@ -2,6 +2,7 @@ package proxy
 
 import (
 	"context"
+	"crypto/tls"
 	"io"
 	"log"
 	"strconv"
@@ -12,13 +13,18 @@ import (
 	"github.com/net-byte/qsocks/config"
 )
 
+var _tlsConf *tls.Config
+
 func ConnectServer(config config.Config) quic.Session {
-	tlsConf, err := config.GetClientTLSConfig()
-	if err != nil {
-		log.Println(err)
-		return nil
+	if _tlsConf == nil {
+		var err error
+		_tlsConf, err = config.GetClientTLSConfig()
+		if err != nil {
+			log.Println(err)
+			return nil
+		}
 	}
-	session, err := quic.DialAddr(config.ServerAddr, tlsConf, nil)
+	session, err := quic.DialAddr(config.ServerAddr, _tlsConf, nil)
 	if err != nil {
 		log.Println(err)
 		return nil
