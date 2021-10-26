@@ -36,7 +36,7 @@ func (u *UDPReply) Start() {
 	}
 	u.UDPConn = udpConn
 	defer u.UDPConn.Close()
-	log.Printf("qsocks [udp] server started on %v", u.Config.LocalAddr)
+	log.Printf("qsocks [udp] client started on %v", u.Config.LocalAddr)
 	u.proxy()
 }
 
