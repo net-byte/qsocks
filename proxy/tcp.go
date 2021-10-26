@@ -1,6 +1,8 @@
 package proxy
 
 import (
+	"context"
+	"log"
 	"net"
 	"strconv"
 
@@ -18,16 +20,25 @@ func TCPProxy(conn net.Conn, config config.Config, data []byte) {
 		DirectProxy(conn, host, port, config)
 		return
 	}
-
-	stream := ConnectServer("tcp", host, port, config)
-	if stream == nil {
+	session := ConnectServer(config)
+	if session == nil {
 		ResponseTCP(conn, constant.ConnectionRefused)
 		return
 	}
-
+	ok := Handshake("tcp", host, port, session)
+	if !ok {
+		ResponseTCP(conn, constant.ConnectionRefused)
+		return
+	}
+	stream, err := session.OpenStreamSync(context.Background())
+	if err != nil {
+		log.Println(err)
+		ResponseTCP(conn, constant.ConnectionRefused)
+		return
+	}
 	ResponseTCP(conn, constant.SuccessReply)
 	go Copy(stream, conn)
-	go Copy(conn, stream)
+	Copy(conn, stream)
 
 }
 

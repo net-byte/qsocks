@@ -29,25 +29,26 @@ func Start(config config.Config) {
 		if err != nil {
 			continue
 		}
-		stream, err := session.AcceptStream(context.Background())
-		if err != nil {
-			log.Println(err)
-			continue
-		}
-		go handleConn(stream, config)
+
+		go handleConn(session, config)
 	}
 
 }
 
-func handshake(config config.Config, stream quic.Stream) (bool, proxy.RequestAddr) {
+func handshake(config config.Config, session quic.Session) (bool, proxy.RequestAddr) {
 	var req proxy.RequestAddr
+	stream, err := session.AcceptUniStream(context.Background())
+	if err != nil {
+		log.Println(err)
+		return false, req
+	}
 	buf := make([]byte, constant.BufferSize)
 	n, err := stream.Read(buf)
 	if n == 0 || err != nil {
 		return false, req
 	}
 	if req.UnmarshalBinary(buf[:n]) != nil {
-		log.Printf("[server] failed to unmarshal binary %v", err)
+		log.Printf("[server] failed to decode request addr %v", err)
 		return false, req
 	}
 	reqTime, _ := strconv.ParseInt(req.Timestamp, 10, 64)
@@ -59,21 +60,24 @@ func handshake(config config.Config, stream quic.Stream) (bool, proxy.RequestAdd
 	return true, req
 }
 
-func handleConn(stream quic.Stream, config config.Config) {
+func handleConn(session quic.Session, config config.Config) {
 	// handshake
-	ok, req := handshake(config, stream)
+	ok, req := handshake(config, session)
 	if !ok {
-		stream.Close()
 		return
 	}
 	// connect real server
+	// log.Printf("[server] dial the real server %v %v:%v", req.Network, req.Host, req.Port)
 	conn, err := net.DialTimeout(req.Network, net.JoinHostPort(req.Host, req.Port), time.Duration(constant.Timeout)*time.Second)
 	if err != nil {
-		stream.Close()
-		log.Printf("[server] failed to dial the real server%v", err)
+		log.Printf("[server] failed to dial the real server %v", err)
 		return
 	}
-
+	stream, err := session.AcceptStream(context.Background())
+	if err != nil {
+		log.Println(err)
+		return
+	}
 	go proxy.Copy(conn, stream)
-	go proxy.Copy(stream, conn)
+	proxy.Copy(stream, conn)
 }

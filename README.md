@@ -40,6 +40,11 @@ docker run -d --restart=always --name qsocks-client -p 1083:1083 -p 1083:1083/ud
 docker run -d --restart=always --name qsocks-server -p 8443:8443/udp netbyte/qsocks -S -s :8443 -ck=/app/certs/client.key -cp=/app/certs/client.pem -sk=/app/certs/server.key -sp=/app/certs/server.pem
 ```
 
+## Setting on linux
+It is recommended to increase the maximum buffer size by running:
+```
+sysctl -w net.core.rmem_max=2500000
+```
 
 # License
 [The MIT License (MIT)](https://raw.githubusercontent.com/net-byte/qsocks/main/LICENSE)

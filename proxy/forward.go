@@ -12,19 +12,7 @@ import (
 	"github.com/net-byte/qsocks/config"
 )
 
-func ConnectServer(network string, host string, port string, config config.Config) quic.Stream {
-	// handshake
-	req := &RequestAddr{}
-	req.Network = network
-	req.Host = host
-	req.Port = port
-	req.Timestamp = strconv.FormatInt(time.Now().Unix(), 10)
-	req.Random = cipher.Random()
-	data, err := req.MarshalBinary()
-	if err != nil {
-		log.Printf("[client] failed to marshal binary %v", err)
-		return nil
-	}
+func ConnectServer(config config.Config) quic.Session {
 	tlsConf, err := config.GetClientTLSConfig()
 	if err != nil {
 		log.Println(err)
@@ -35,13 +23,29 @@ func ConnectServer(network string, host string, port string, config config.Confi
 		log.Println(err)
 		return nil
 	}
-	stream, err := session.OpenStreamSync(context.Background())
+	return session
+}
+
+func Handshake(network string, host string, port string, session quic.Session) bool {
+	// handshake
+	req := &RequestAddr{}
+	req.Network = network
+	req.Host = host
+	req.Port = port
+	req.Timestamp = strconv.FormatInt(time.Now().Unix(), 10)
+	req.Random = cipher.Random()
+	data, err := req.MarshalBinary()
+	if err != nil {
+		log.Printf("[client] failed to encode request addr %v", err)
+		return false
+	}
+	stream, err := session.OpenUniStreamSync(context.Background())
 	if err != nil {
 		log.Println(err)
-		return nil
+		return false
 	}
 	stream.Write(data)
-	return stream
+	return true
 }
 
 func Copy(destination io.WriteCloser, source io.ReadCloser) {

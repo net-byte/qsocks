@@ -2,6 +2,7 @@ package proxy
 
 import (
 	"bytes"
+	"context"
 	"io"
 	"log"
 	"net"
@@ -20,10 +21,10 @@ type UDPReply struct {
 }
 
 type ProxyUDP struct {
-	udpConn   *net.UDPConn
-	headerMap sync.Map
-	streamMap sync.Map
-	config    config.Config
+	udpConn    *net.UDPConn
+	headerMap  sync.Map
+	sessionMap sync.Map
+	config     config.Config
 }
 
 func (u *UDPReply) Start() {
@@ -58,20 +59,34 @@ func (proxy *ProxyUDP) toRemote() {
 			continue
 		}
 		key := cliAddr.String()
-		var stream quic.Stream
-		if value, ok := proxy.streamMap.Load(key); ok {
-			stream = value.(quic.Stream)
-		} else {
-			stream = ConnectServer("udp", dstAddr.IP.String(), strconv.Itoa(dstAddr.Port), proxy.config)
-			if stream == nil {
+		var session quic.Session
+		if value, ok := proxy.sessionMap.Load(key); ok {
+			session = value.(quic.Session)
+			stream, err := session.OpenStreamSync(context.Background())
+			if err != nil {
+				log.Println(err)
 				continue
 			}
-			proxy.streamMap.Store(key, stream)
+			stream.Write(data)
+		} else {
+			session = ConnectServer(proxy.config)
+			if session == nil {
+				continue
+			}
+			ok := Handshake("udp", dstAddr.IP.String(), strconv.Itoa(dstAddr.Port), session)
+			if !ok {
+				continue
+			}
+			stream, err := session.OpenStreamSync(context.Background())
+			if err != nil {
+				log.Println(err)
+				continue
+			}
+			stream.Write(data)
+			proxy.sessionMap.Store(key, session)
 			proxy.headerMap.Store(key, header)
 			go proxy.toLocal(stream, cliAddr)
 		}
-
-		stream.Write(data)
 	}
 }
 
@@ -92,7 +107,7 @@ func (proxy *ProxyUDP) toLocal(stream quic.Stream, cliAddr *net.UDPAddr) {
 		}
 	}
 	proxy.headerMap.Delete(key)
-	proxy.streamMap.Delete(key)
+	proxy.sessionMap.Delete(key)
 }
 
 func (proxy *ProxyUDP) getAddr(b []byte) (dstAddr *net.UDPAddr, header []byte, data []byte) {
