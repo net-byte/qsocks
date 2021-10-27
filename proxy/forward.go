@@ -60,7 +60,6 @@ func Handshake(network string, host string, port string, session quic.Session) b
 		log.Println(err)
 		return false
 	}
-	defer stream.Close()
 	stream.Write(data)
 	return true
 }
