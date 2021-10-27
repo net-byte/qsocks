@@ -29,7 +29,6 @@ func Start(config config.Config) {
 		if err != nil {
 			continue
 		}
-
 		go handleConn(session, config)
 	}
 
@@ -67,7 +66,6 @@ func handleConn(session quic.Session, config config.Config) {
 		return
 	}
 	// connect real server
-	// log.Printf("[server] dial the real server %v %v:%v", req.Network, req.Host, req.Port)
 	conn, err := net.DialTimeout(req.Network, net.JoinHostPort(req.Host, req.Port), time.Duration(constant.Timeout)*time.Second)
 	if err != nil {
 		log.Printf("[server] failed to dial the real server %v", err)

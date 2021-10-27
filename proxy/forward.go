@@ -32,7 +32,7 @@ func ConnectServer(config config.Config) quic.Session {
 		ConnectionIDLength:   12,
 		HandshakeIdleTimeout: time.Second * 10,
 		MaxIdleTimeout:       time.Second * 30,
-		KeepAlive:            true,
+		KeepAlive:            false,
 	}
 	session, err := quic.DialAddr(config.ServerAddr, _tlsConf, quicConfig)
 	if err != nil {
@@ -60,6 +60,7 @@ func Handshake(network string, host string, port string, session quic.Session) b
 		log.Println(err)
 		return false
 	}
+	defer stream.Close()
 	stream.Write(data)
 	return true
 }
