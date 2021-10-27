@@ -82,10 +82,10 @@ func (proxy *ProxyUDP) toRemote() {
 				log.Println(err)
 				continue
 			}
+			go proxy.toLocal(stream, cliAddr)
 			stream.Write(data)
 			proxy.sessionMap.Store(key, session)
 			proxy.headerMap.Store(key, header)
-			go proxy.toLocal(stream, cliAddr)
 		}
 	}
 }

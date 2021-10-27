@@ -6,6 +6,7 @@ import (
 	"io"
 	"log"
 	"strconv"
+	"sync"
 	"time"
 
 	"github.com/lucas-clemente/quic-go"
@@ -14,8 +15,10 @@ import (
 )
 
 var _tlsConf *tls.Config
+var _lock sync.Mutex
 
 func ConnectServer(config config.Config) quic.Session {
+	_lock.Lock()
 	if _tlsConf == nil {
 		var err error
 		_tlsConf, err = config.GetClientTLSConfig()
@@ -24,7 +27,14 @@ func ConnectServer(config config.Config) quic.Session {
 			return nil
 		}
 	}
-	session, err := quic.DialAddr(config.ServerAddr, _tlsConf, nil)
+	_lock.Unlock()
+	quicConfig := &quic.Config{
+		ConnectionIDLength:   12,
+		HandshakeIdleTimeout: time.Second * 10,
+		MaxIdleTimeout:       time.Second * 30,
+		KeepAlive:            true,
+	}
+	session, err := quic.DialAddr(config.ServerAddr, _tlsConf, quicConfig)
 	if err != nil {
 		log.Println(err)
 		return nil
