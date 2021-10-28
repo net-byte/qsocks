@@ -60,6 +60,7 @@ func handshake(config config.Config, session quic.Session) (bool, proxy.RequestA
 }
 
 func handleConn(session quic.Session, config config.Config) {
+	defer session.CloseWithError(0, "bye")
 	// handshake
 	ok, req := handshake(config, session)
 	if !ok {

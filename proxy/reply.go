@@ -82,7 +82,7 @@ func (proxy *ProxyUDP) toRemote() {
 				log.Println(err)
 				continue
 			}
-			go proxy.toLocal(stream, cliAddr)
+			go proxy.toLocal(session, stream, cliAddr)
 			stream.Write(data)
 			proxy.sessionMap.Store(key, session)
 			proxy.headerMap.Store(key, header)
@@ -90,8 +90,9 @@ func (proxy *ProxyUDP) toRemote() {
 	}
 }
 
-func (proxy *ProxyUDP) toLocal(stream quic.Stream, cliAddr *net.UDPAddr) {
+func (proxy *ProxyUDP) toLocal(session quic.Session, stream quic.Stream, cliAddr *net.UDPAddr) {
 	defer stream.Close()
+	defer session.CloseWithError(0, "bye")
 	key := cliAddr.String()
 	buf := make([]byte, constant.BufferSize)
 	for {

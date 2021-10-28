@@ -25,6 +25,7 @@ func TCPProxy(conn net.Conn, config config.Config, data []byte) {
 		ResponseTCP(conn, constant.ConnectionRefused)
 		return
 	}
+	defer session.CloseWithError(0, "bye")
 	ok := Handshake("tcp", host, port, session)
 	if !ok {
 		ResponseTCP(conn, constant.ConnectionRefused)
