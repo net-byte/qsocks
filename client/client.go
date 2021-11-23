@@ -4,7 +4,6 @@ import (
 	"io"
 	"log"
 	"net"
-	"time"
 
 	"github.com/net-byte/qsocks/common/constant"
 	"github.com/net-byte/qsocks/config"
@@ -33,10 +32,8 @@ func handleTCP(config config.Config, udpConn *net.UDPConn) {
 }
 
 func handleUDP(config config.Config) *net.UDPConn {
-	udpReply := &proxy.UDPReply{Config: config}
-	go udpReply.Start()
-	time.Sleep(1 * time.Second)
-	return udpReply.UDPConn
+	udpRelay := &proxy.UDPRelay{Config: config}
+	return udpRelay.Start()
 }
 
 func tcpHandler(tcpConn net.Conn, udpConn *net.UDPConn, config config.Config) {
