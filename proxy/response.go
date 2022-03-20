@@ -8,7 +8,7 @@ import (
 	"github.com/net-byte/qsocks/common/constant"
 )
 
-func ResponseTCP(conn net.Conn, rep byte) {
+func ResponseClient(conn net.Conn, rep byte) {
 	/**
 	  +----+-----+-------+------+----------+----------+
 	  |VER | REP |  RSV  | ATYP | BND.ADDR | BND.PORT |
@@ -30,7 +30,7 @@ func ResponseNoAuth(conn net.Conn) {
 	conn.Write([]byte{constant.Socks5Version, constant.NoAuth})
 }
 
-func ResponseUDP(conn net.Conn, bindAddr *net.UDPAddr) {
+func ResponseUDPClient(conn net.Conn, bindAddr *net.UDPAddr) {
 	/**
 	  +----+-----+-------+------+----------+----------+
 	  |VER | REP |  RSV  | ATYP | BND.ADDR | BND.PORT |

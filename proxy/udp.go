@@ -23,7 +23,7 @@ func UDPProxy(tcpConn net.Conn, udpConn *net.UDPConn, config config.Config) {
 	}
 	bindAddr, _ := net.ResolveUDPAddr("udp", udpConn.LocalAddr().String())
 	//response to client
-	ResponseUDP(tcpConn, bindAddr)
+	ResponseUDPClient(tcpConn, bindAddr)
 	//keep tcp alive
 	done := make(chan bool)
 	go keepTCPAlive(tcpConn.(*net.TCPConn), done)
@@ -166,7 +166,7 @@ func (relay *UDPRelay) getAddr(b []byte) (dstAddr *net.UDPAddr, header []byte, d
 	case constant.Ipv6Address:
 		{
 			dstAddr = &net.UDPAddr{
-				IP:   net.IP(b[4:19]),
+				IP:   net.IP(b[4:20]),
 				Port: int(b[20])<<8 | int(b[21]),
 			}
 			header = b[0:22]
