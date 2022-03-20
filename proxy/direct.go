@@ -13,13 +13,13 @@ import (
 func DirectProxy(conn net.Conn, host string, port string, config config.Config) {
 	remoteConn := connectTCP(host, port, config)
 	if remoteConn == nil {
-		ResponseTCP(conn, constant.ConnectionRefused)
+		ResponseClient(conn, constant.ConnectionRefused)
 		return
 	}
 
-	ResponseTCP(conn, constant.SuccessReply)
+	ResponseClient(conn, constant.SuccessReply)
 	go forward(remoteConn, conn)
-	go forward(conn, remoteConn)
+	forward(conn, remoteConn)
 }
 
 func connectTCP(host string, port string, config config.Config) net.Conn {

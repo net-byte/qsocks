@@ -63,10 +63,10 @@ func tcpHandler(tcpConn net.Conn, udpConn *net.UDPConn, config config.Config) {
 		proxy.UDPProxy(tcpConn, udpConn, config)
 		return
 	case constant.BindCommand:
-		proxy.ResponseTCP(tcpConn, constant.CommandNotSupported)
+		proxy.ResponseClient(tcpConn, constant.CommandNotSupported)
 		return
 	default:
-		proxy.ResponseTCP(tcpConn, constant.CommandNotSupported)
+		proxy.ResponseClient(tcpConn, constant.CommandNotSupported)
 		return
 	}
 }
