@@ -6,6 +6,7 @@ A socks5 proxy over quic.
 [![Go Report Card](https://goreportcard.com/badge/github.com/net-byte/qsocks)](https://goreportcard.com/report/github.com/net-byte/qsocks)
 ![image](https://img.shields.io/badge/License-MIT-orange)
 ![image](https://img.shields.io/badge/License-Anti--996-red)
+![image](https://img.shields.io/github/downloads/net-byte/qsocks/total.svg)
 
 # Usage
 ```
@@ -31,13 +32,16 @@ Usage of /main:
 
 ## Run client
 ```
-docker run -d --restart=always --name qsocks-client -p 1083:1083 -p 1083:1083/udp netbyte/qsocks -l :1083 -s SERVER_IP:8443 -ck=/app/certs/client.key -cp=/app/certs/client.pem -sk=/app/certs/server.key -sp=/app/certs/server.pem
+docker run -d --restart=always --name qsocks-client \
+-p 127.0.0.1:1083:1083 -p 127.0.0.1:1083:1083/udp netbyte/qsocks -l 127.0.0.1:1083 -s SERVER_IP:8443 \
+-ck /app/certs/client.key -cp /app/certs/client.pem -sk /app/certs/server.key -sp /app/certs/server.pem
 
 ```
 
 ## Run server
 ```
-docker run -d --restart=always --name qsocks-server -p 8443:8443/udp netbyte/qsocks -S -s :8443 -ck=/app/certs/client.key -cp=/app/certs/client.pem -sk=/app/certs/server.key -sp=/app/certs/server.pem
+docker run -d --restart=always --name qsocks-server -p 8443:8443/udp netbyte/qsocks \
+-S -s :8443 -ck /app/certs/client.key -cp /app/certs/client.pem -sk /app/certs/server.key -sp /app/certs/server.pem
 ```
 
 ## Setting on linux
