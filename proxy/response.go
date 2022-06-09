@@ -5,10 +5,10 @@ import (
 	"encoding/binary"
 	"net"
 
-	"github.com/net-byte/qsocks/common/constant"
+	"github.com/net-byte/qsocks/common/enum"
 )
 
-func ResponseClient(conn net.Conn, rep byte) {
+func Resp(conn net.Conn, rep byte) {
 	/**
 	  +----+-----+-------+------+----------+----------+
 	  |VER | REP |  RSV  | ATYP | BND.ADDR | BND.PORT |
@@ -16,10 +16,10 @@ func ResponseClient(conn net.Conn, rep byte) {
 	  | 1  |  1  | X'00' |  1   | Variable |    2     |
 	  +----+-----+-------+------+----------+----------+
 	*/
-	conn.Write([]byte{constant.Socks5Version, rep, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00})
+	conn.Write([]byte{enum.Socks5Version, rep, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00})
 }
 
-func ResponseNoAuth(conn net.Conn) {
+func RespNoAuth(conn net.Conn) {
 	/**
 	  +----+--------+
 	  |VER | METHOD |
@@ -27,10 +27,10 @@ func ResponseNoAuth(conn net.Conn) {
 	  | 1  |   1    |
 	  +----+--------+
 	*/
-	conn.Write([]byte{constant.Socks5Version, constant.NoAuth})
+	conn.Write([]byte{enum.Socks5Version, enum.NoAuth})
 }
 
-func ResponseUDPClient(conn net.Conn, bindAddr *net.UDPAddr) {
+func RespSuccess(conn net.Conn, bindAddr *net.UDPAddr) {
 	/**
 	  +----+-----+-------+------+----------+----------+
 	  |VER | REP |  RSV  | ATYP | BND.ADDR | BND.PORT |
@@ -38,7 +38,7 @@ func ResponseUDPClient(conn net.Conn, bindAddr *net.UDPAddr) {
 	  | 1  |  1  | X'00' |  1   | Variable |    2     |
 	  +----+-----+-------+------+----------+----------+
 	*/
-	response := []byte{constant.Socks5Version, constant.SuccessReply, 0x00, 0x01}
+	response := []byte{enum.Socks5Version, enum.SuccessReply, 0x00, 0x01}
 	buffer := bytes.NewBuffer(response)
 	binary.Write(buffer, binary.BigEndian, bindAddr.IP.To4())
 	binary.Write(buffer, binary.BigEndian, uint16(bindAddr.Port))

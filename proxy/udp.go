@@ -2,7 +2,6 @@ package proxy
 
 import (
 	"bytes"
-	"context"
 	"io"
 	"log"
 	"net"
@@ -11,7 +10,7 @@ import (
 	"time"
 
 	"github.com/lucas-clemente/quic-go"
-	"github.com/net-byte/qsocks/common/constant"
+	"github.com/net-byte/qsocks/common/enum"
 	"github.com/net-byte/qsocks/config"
 )
 
@@ -23,7 +22,7 @@ func UDPProxy(tcpConn net.Conn, udpConn *net.UDPConn, config config.Config) {
 	}
 	bindAddr, _ := net.ResolveUDPAddr("udp", udpConn.LocalAddr().String())
 	//response to client
-	ResponseUDPClient(tcpConn, bindAddr)
+	RespSuccess(tcpConn, bindAddr)
 	//keep tcp alive
 	done := make(chan bool)
 	go keepTCPAlive(tcpConn.(*net.TCPConn), done)
@@ -32,7 +31,7 @@ func UDPProxy(tcpConn net.Conn, udpConn *net.UDPConn, config config.Config) {
 
 func keepTCPAlive(tcpConn *net.TCPConn, done chan<- bool) {
 	tcpConn.SetKeepAlive(true)
-	buf := make([]byte, constant.BufferSize)
+	buf := make([]byte, enum.BufferSize)
 	for {
 		_, err := tcpConn.Read(buf[0:])
 		if err != nil {
@@ -43,10 +42,10 @@ func keepTCPAlive(tcpConn *net.TCPConn, done chan<- bool) {
 }
 
 type UDPRelay struct {
-	UDPConn    *net.UDPConn
-	Config     config.Config
-	headerMap  sync.Map
-	sessionMap sync.Map
+	UDPConn   *net.UDPConn
+	Config    config.Config
+	headerMap sync.Map
+	streamMap sync.Map
 }
 
 func (relay *UDPRelay) Start() *net.UDPConn {
@@ -57,16 +56,16 @@ func (relay *UDPRelay) Start() *net.UDPConn {
 		return nil
 	}
 	relay.UDPConn = udpConn
-	go relay.toRemote()
+	go relay.toServer()
 	log.Printf("qsocks [udp] client started on %v", relay.Config.LocalAddr)
 	return relay.UDPConn
 }
 
-func (relay *UDPRelay) toRemote() {
+func (relay *UDPRelay) toServer() {
 	defer relay.UDPConn.Close()
-	buf := make([]byte, constant.BufferSize)
+	buf := make([]byte, enum.BufferSize)
 	for {
-		relay.UDPConn.SetReadDeadline(time.Now().Add(time.Duration(constant.Timeout) * time.Second))
+		relay.UDPConn.SetReadDeadline(time.Now().Add(time.Duration(enum.Timeout) * time.Second))
 		n, cliAddr, err := relay.UDPConn.ReadFromUDP(buf)
 		if err != nil || err == io.EOF || n == 0 {
 			continue
@@ -77,42 +76,31 @@ func (relay *UDPRelay) toRemote() {
 			continue
 		}
 		key := cliAddr.String()
-		var session quic.Session
-		if value, ok := relay.sessionMap.Load(key); ok {
-			session = value.(quic.Session)
-			stream, err := session.OpenStreamSync(context.Background())
-			if err != nil {
-				log.Println(err)
-				continue
-			}
+		var stream quic.Stream
+		if value, ok := relay.streamMap.Load(key); ok {
+			stream = value.(quic.Stream)
 			stream.Write(data)
 		} else {
-			session = ConnectServer(relay.Config)
+			session := ConnectServer(relay.Config)
 			if session == nil {
 				continue
 			}
-			ok := Handshake("udp", dstAddr.IP.String(), strconv.Itoa(dstAddr.Port), session)
+			ok, stream := Handshake("udp", dstAddr.IP.String(), strconv.Itoa(dstAddr.Port), session)
 			if !ok {
 				continue
 			}
-			stream, err := session.OpenStreamSync(context.Background())
-			if err != nil {
-				log.Println(err)
-				continue
-			}
-			go relay.toLocal(session, stream, cliAddr)
+			go relay.toClient(stream, cliAddr)
 			stream.Write(data)
-			relay.sessionMap.Store(key, session)
+			relay.streamMap.Store(key, stream)
 			relay.headerMap.Store(key, header)
 		}
 	}
 }
 
-func (relay *UDPRelay) toLocal(session quic.Session, stream quic.Stream, cliAddr *net.UDPAddr) {
+func (relay *UDPRelay) toClient(stream quic.Stream, cliAddr *net.UDPAddr) {
 	defer stream.Close()
-	defer session.CloseWithError(0, "bye")
 	key := cliAddr.String()
-	buf := make([]byte, constant.BufferSize)
+	buf := make([]byte, enum.BufferSize)
 	for {
 		n, err := stream.Read(buf)
 		if n == 0 || err != nil {
@@ -126,7 +114,7 @@ func (relay *UDPRelay) toLocal(session quic.Session, stream quic.Stream, cliAddr
 		}
 	}
 	relay.headerMap.Delete(key)
-	relay.sessionMap.Delete(key)
+	relay.streamMap.Delete(key)
 }
 
 func (relay *UDPRelay) getAddr(b []byte) (dstAddr *net.UDPAddr, header []byte, data []byte) {
@@ -142,14 +130,14 @@ func (relay *UDPRelay) getAddr(b []byte) (dstAddr *net.UDPAddr, header []byte, d
 		return nil, nil, nil
 	}
 	switch b[3] {
-	case constant.Ipv4Address:
+	case enum.Ipv4Address:
 		dstAddr = &net.UDPAddr{
 			IP:   net.IPv4(b[4], b[5], b[6], b[7]),
 			Port: int(b[8])<<8 | int(b[9]),
 		}
 		header = b[0:10]
 		data = b[10:]
-	case constant.FqdnAddress:
+	case enum.FqdnAddress:
 		domainLength := int(b[4])
 		domain := string(b[5 : 5+domainLength])
 		ipAddr, err := net.ResolveIPAddr("ip", domain)
@@ -163,7 +151,7 @@ func (relay *UDPRelay) getAddr(b []byte) (dstAddr *net.UDPAddr, header []byte, d
 		}
 		header = b[0 : 7+domainLength]
 		data = b[7+domainLength:]
-	case constant.Ipv6Address:
+	case enum.Ipv6Address:
 		{
 			dstAddr = &net.UDPAddr{
 				IP:   net.IP(b[4:20]),
