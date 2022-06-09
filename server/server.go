@@ -31,15 +31,17 @@ func Start(config config.Config) {
 		if err != nil {
 			continue
 		}
-		for {
-			stream, err := session.AcceptStream(context.Background())
-			if err != nil {
-				log.Println(err)
-				break
+		go func() {
+			for {
+				stream, err := session.AcceptStream(context.Background())
+				if err != nil {
+					log.Println(err)
+					break
+				}
+				go proxyConn(stream, config)
 			}
-			go proxyConn(stream, config)
-		}
-		session.CloseWithError(0, "session closed")
+			session.CloseWithError(0, "session closed")
+		}()
 	}
 
 }
