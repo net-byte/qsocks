@@ -1,4 +1,4 @@
-package constant
+package enum
 
 const (
 	Socks5Version = uint8(5)

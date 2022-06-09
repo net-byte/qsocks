@@ -1,12 +1,10 @@
 package proxy
 
 import (
-	"context"
-	"log"
 	"net"
 	"strconv"
 
-	"github.com/net-byte/qsocks/common/constant"
+	"github.com/net-byte/qsocks/common/enum"
 	"github.com/net-byte/qsocks/config"
 )
 
@@ -22,24 +20,17 @@ func TCPProxy(conn net.Conn, config config.Config, data []byte) {
 	}
 	session := ConnectServer(config)
 	if session == nil {
-		ResponseClient(conn, constant.ConnectionRefused)
+		Resp(conn, enum.ConnectionRefused)
 		return
 	}
-	defer session.CloseWithError(0, "bye")
-	ok := Handshake("tcp", host, port, session)
+	ok, stream := Handshake("tcp", host, port, session)
 	if !ok {
-		ResponseClient(conn, constant.ConnectionRefused)
+		Resp(conn, enum.ConnectionRefused)
 		return
 	}
-	stream, err := session.OpenStreamSync(context.Background())
-	if err != nil {
-		log.Println(err)
-		ResponseClient(conn, constant.ConnectionRefused)
-		return
-	}
-	ResponseClient(conn, constant.SuccessReply)
-	go Copy(stream, conn)
-	Copy(conn, stream)
+	Resp(conn, enum.SuccessReply)
+	go copy(stream, conn)
+	copy(conn, stream)
 
 }
 
@@ -53,11 +44,11 @@ func getAddr(b []byte) (host string, port string) {
 	*/
 	len := len(b)
 	switch b[3] {
-	case constant.Ipv4Address:
+	case enum.Ipv4Address:
 		host = net.IPv4(b[4], b[5], b[6], b[7]).String()
-	case constant.FqdnAddress:
+	case enum.FqdnAddress:
 		host = string(b[5 : len-2])
-	case constant.Ipv6Address:
+	case enum.Ipv6Address:
 		host = net.IP(b[4:20]).String()
 	default:
 		return "", ""
