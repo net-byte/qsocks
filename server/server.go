@@ -31,17 +31,20 @@ func Start(config config.Config) {
 		if err != nil {
 			continue
 		}
-		go proxyConn(session, config)
+		for {
+			stream, err := session.AcceptStream(context.Background())
+			if err != nil {
+				log.Println(err)
+				break
+			}
+			go proxyConn(stream, config)
+		}
+		session.CloseWithError(0, "session closed")
 	}
 
 }
 
-func proxyConn(session quic.Session, config config.Config) {
-	stream, err := session.AcceptStream(context.Background())
-	if err != nil {
-		log.Println(err)
-		return
-	}
+func proxyConn(stream quic.Stream, config config.Config) {
 	defer stream.Close()
 	reader := bufio.NewReader(stream)
 	// handshake
